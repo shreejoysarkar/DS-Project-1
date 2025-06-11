@@ -3,11 +3,16 @@ import sys
 from dataclasses import dataclass
 
 from catboost import CatBoostRegressor
+import dagshub
+import mlflow
+import numpy as np
 from sklearn.ensemble import (
     AdaBoostRegressor,
     GradientBoostingRegressor,
     RandomForestRegressor,
 )
+
+from sklearn.metrics import mean_squared_error,mean_absolute_error,r2_score
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
@@ -25,6 +30,12 @@ class ModelTrainerConfig:
 class ModelTrainer:
     def __init__(self):
         self.model_trainer_config = ModelTrainerConfig()
+
+    def eval_metrics(self,actual,pred):
+        rmse = np.sqrt(mean_squared_error(actual,pred))
+        mae = mean_absolute_error(actual,pred)
+        r2 = r2_score(actual,pred)
+        return rmse, mae, r2
 
     def initiate_model_trainer(self,train_array, test_array):
         try:
@@ -95,6 +106,41 @@ class ModelTrainer:
             ]
 
             best_model = models[best_model_name]
+
+
+
+
+            print("this is the best model")
+            print(best_model_name)
+
+
+            model_names = list(params.keys())
+
+            actual_model = ""
+
+            for model in model_names:
+                if best_model_name == model:
+                    actual_model = actual_model + model
+
+            best_params = params[actual_model]
+
+            dagshub.init(repo_owner='shreejoysarkar', repo_name='DS-Project-1', mlflow=True)
+
+            # mlflow 
+            import mlflow
+
+            with mlflow.start_run():
+                mlflow.log_param('parameter name', 'value')
+                mlflow.log_metric('metric name', 1)
+                predicted_qualities = best_model.predict(X_test)
+
+                (rmse, mae, r2) = self.eval_metrics(y_test, predicted_qualities)
+ 
+           
+
+
+
+             
         
             if best_model_score<0.6:
                 raise CustomException("No Best model found")
